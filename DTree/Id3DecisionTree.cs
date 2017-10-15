@@ -29,19 +29,28 @@ namespace DTree
             }
 
             var bestAttribute = FindBestAttribute(sampleData);
+            if (bestAttribute.AttributeName.Equals("Session First Request Day of Week")) {
+                int a = 1;
+            }
+            Console.WriteLine("Found best attribute: " + bestAttribute.AttributeName);
+
             var newNode = new TreeNode(bestAttribute);
+            Data.RemainingAttributes.Remove(
+                    Data.RemainingAttributes.FirstOrDefault(a => a.AttributeName.Equals(bestAttribute.AttributeName)));
+
+            var mostCommonValue = GetMostCommonValueForAttribute(sampleData, bestAttribute.AttributeName);
 
             foreach (var value in bestAttribute.PossibleValues)
             {
-                var sampleSubset = GetSamplesHaveTheValue(sampleData, value, bestAttribute);
+                var sampleSubset = GetSamplesHaveTheValue(sampleData, value, bestAttribute, mostCommonValue);
                 if (sampleSubset.Count == 0)
                 {
                     newNode.Children.Add(new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName))));
                 }
-
-                Data.RemainingAttributes.Remove(
-                    Data.RemainingAttributes.FirstOrDefault(a => a.AttributeName.Equals(bestAttribute.AttributeName)));
-                newNode.Children.Add(GrowTree(sampleSubset));
+                else
+                {
+                    newNode.Children.Add(GrowTree(sampleSubset));
+                }                              
             }
 
             return newNode;
@@ -121,7 +130,7 @@ namespace DTree
             foreach (var attribute in Data.RemainingAttributes)
             {
                 double gainRatio = CalculateGainRatio(sampleData, attribute, entropyBeforeSplit);
-                if (gainRatio > maxGainRatio)
+                if (gainRatio >= maxGainRatio)
                 {
                     maxGainRatio = gainRatio;
                     bestAttribute = attribute;
@@ -131,16 +140,17 @@ namespace DTree
             return bestAttribute;
         }
 
-        public List<List<object>> GetSamplesHaveTheValue(List<List<object>> sampleData, string value, Attribute attribute)
+        public List<List<object>> GetSamplesHaveTheValue(List<List<object>> sampleData, string value, Attribute attribute, string mostCommonValue)
         {
             int attributeIndex = Data.AllAttributes.FindIndex(a => a.AttributeName.Equals(attribute.AttributeName));
             var sampleSubset = new List<List<object>>();
+
             foreach (var data in sampleData)
             {
                 var val = (string)data[attributeIndex];
                 if (val.Equals("?"))
                 {
-                    val = GetMostCommonValueForAttribute(sampleData, attribute.AttributeName);
+                    val = mostCommonValue;
                 }
 
                 if (val.Equals(value))
@@ -163,10 +173,21 @@ namespace DTree
                 int falseCount = 0;
                 GetSplitCountForValue(sampleData, attribute, value, out trueCount, out falseCount);
 
+                if (trueCount == 0 && falseCount == 0)
+                {
+                    //TODO:OK?
+                    continue; 
+                }
+
                 double valueEntropy = CalculateEntropy(trueCount, falseCount);
                 double valueCountRatio = (double)(trueCount + falseCount) / sampleData.Count;
 
                 totalEntropyAfterSplit += valueCountRatio * valueEntropy;
+
+                if (double.IsNaN(totalEntropyAfterSplit))
+                {
+                    throw new Exception();
+                }
 
                 if (!valueCountRatio.Equals(0.0))
                 {
@@ -178,6 +199,12 @@ namespace DTree
 
             double informationGain = entropyBeforeSplit - totalEntropyAfterSplit;
 
+            if (double.IsNaN(splitInformation))
+            {
+                throw new Exception();
+            }
+
+            //TODO: splitInformation == 0?
             return informationGain / splitInformation;
         }
 
