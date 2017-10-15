@@ -13,10 +13,18 @@ namespace DTree
 
         public List<TreeNode> Children { get; set; } 
 
-        public TreeNode(Attribute splittingAttribute)
+        public TreeNode Parent { get; set; }
+
+        public string ParentAttributeValue { get; set; }
+
+        public string SplittingAttributeMostCommonValue { get; set; }
+
+        public TreeNode(Attribute splittingAttribute, TreeNode parent, string parentValue)
         {
             this.SplittingAttribute = splittingAttribute;
-            this.Children = new List<TreeNode>();           
+            this.Children = new List<TreeNode>();
+            this.Parent = parent;
+            this.ParentAttributeValue = parentValue;
         }
 
         public TreeNode()
