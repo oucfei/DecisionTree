@@ -8,9 +8,11 @@ namespace DTree
 {
     public class Id3Test
     {
+        private const string TrainingDataFile = @"D:\MachineLearning\Data\testingD\testingD.arff";
+
         public static void Main(string[] args)
         {
-            Data.ReadSampleData(@"E:\MachineLearning\MyTestData\partSampleData.arff");
+            Data.ReadSampleData(TrainingDataFile);
 
             Id3DecisionTree tree = new Id3DecisionTree();
 

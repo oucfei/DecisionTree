@@ -24,10 +24,5 @@ namespace DTree
         {
         }
 
-        //public static readonly Attribute TargetAttribute = new Attribute()
-        //{
-        //    AttributeName = "Class",
-        //    PossibleValues = new List<string>() { "True", "False"}
-        //};
     }
 }

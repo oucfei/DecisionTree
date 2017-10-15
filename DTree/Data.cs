@@ -26,12 +26,14 @@ namespace DTree
                 file.ReadLine();
             }
 
+            Console.WriteLine("start reading attributes");
             while ((line = file.ReadLine()) != null)
             {
                 if (line.Equals("@data"))
                 {
                     isData = true;
                     line = file.ReadLine();
+                    Console.WriteLine("start reading data");
                 }
 
                 if (!isData)
@@ -45,7 +47,7 @@ namespace DTree
             }
 
             //removing the last attribute because that's the target attribute.
-            AllAttributes.RemoveAt(AllAttributes.Count - 1);
+            //AllAttributes.RemoveAt(AllAttributes.Count - 1);
             RemainingAttributes.RemoveAt(RemainingAttributes.Count - 1);
         }
 
