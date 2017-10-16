@@ -8,27 +8,35 @@ namespace DTree
 {
     public class Id3Test
     {
-        private const string TrainingDataFile = @"E:\MachineLearning\training_subsetD\training_subsetD.arff";
+        private const string TrainingDataFile = @"D:\MachineLearning\Data\training_subsetD\training_subsetD.arff";
+
+        private const string TestDataFile = @"D:\MachineLearning\Data\testingD\testingD.arff";
+
+        //private const string TrainingDataFile = @"D:\MachineLearning\Data\SampleData.txt";
 
         public static void Main(string[] args)
         {
-            Data.ReadSampleData(TrainingDataFile);
+            Data.ReadData(TrainingDataFile, true);
 
             Id3DecisionTree tree = new Id3DecisionTree();
 
             TreeNode root = tree.GrowTree(Data.AllSampleData, null, "");
 
-            TestDecisionTreeWithSampleData(root);
+            TestDecisionTree(root, Data.AllSampleData);
+
+            //Data.ReadData(TestDataFile, false);
+
+            //TestDecisionTree(root, Data.AllTestData);
         }
 
-        private static void TestDecisionTreeWithSampleData(TreeNode root)
+        private static void TestDecisionTree(TreeNode root, List<List<object>> AllData)
         {
             int realTrueOutputTrue = 0;
             int realFalseOutputTrue = 0;
             int realTrueOutputFalse = 0;
             int realFalseOutputFalse = 0;
 
-            foreach (var data in Data.AllSampleData)
+            foreach (var data in AllData)
             {
                 bool treeOutput = TestDataWithDecisionTree(root, data);
                 bool realValue = ((string) data[data.Count - 1]).Equals("True");

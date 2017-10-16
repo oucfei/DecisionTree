@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathNet.Numerics.Distributions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -11,7 +12,7 @@ namespace DTree
     {
         private const string TargetAttributeName = "Class";
 
-        private const double ConfidenceLevel = 0.99;
+        private const double ConfidenceLevel = 0.0;
 
         public TreeNode GrowTree(List<List<object>> sampleData, TreeNode parent, string parentAttributeValue)
         {
@@ -32,10 +33,16 @@ namespace DTree
 
             double gainRatio;
             var bestAttribute = FindBestAttribute(sampleData, out gainRatio);
-            var chiSquare = CalculateChiSquare(sampleData, bestAttribute);
-            if (gainRatio < 1e-10 || chiSquare < ConfidenceLevel)
+            if (gainRatio < 1e-10)
             {
-                Console.WriteLine("best attribute less than mini gainRatio: " + bestAttribute.AttributeName + " // with ChiSquare: " + chiSquare);
+                Console.WriteLine("best attribute less than mini gainRatio: " + bestAttribute.AttributeName);
+                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue); //leaf node
+            }
+
+            var pValue = CalculatePValue(sampleData, bestAttribute);
+            if (pValue > (1 - ConfidenceLevel))
+            {
+                Console.WriteLine("best attribute less than Confidence level with pValue: " + pValue);
                 //TODO: OK?
                 return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue); //leaf node
             }
@@ -66,7 +73,7 @@ namespace DTree
             return newNode;
         }
 
-        private double CalculateChiSquare(List<List<object>> sampleData, Attribute candidateAttribute)
+        private double CalculatePValue(List<List<object>> sampleData, Attribute candidateAttribute)
         {
             int totalTrueCount = GetPositiveSampleCount(sampleData);
             int totalFalseCount = sampleData.Count - totalTrueCount;
@@ -91,7 +98,10 @@ namespace DTree
                              (falseCount - expectedFalse) * (falseCount - expectedFalse) / expectedFalse;
             }
 
-            return chiSquare;
+            var chiSquareCalculator = new ChiSquared(candidateAttribute.PossibleValues.Count - 1);
+            var pValue = 1 - chiSquareCalculator.CumulativeDistribution(chiSquare);
+
+            return pValue;
         }
 
         private string GetMostCommonValueForAttribute(List<List<object>> sampleData, string attributeName)
@@ -222,11 +232,6 @@ namespace DTree
                 var valueCountRatio = (double)(trueCount + falseCount) / sampleData.Count;
 
                 totalEntropyAfterSplit += valueCountRatio * valueEntropy;
-
-                if (double.IsNaN(totalEntropyAfterSplit))
-                {
-                    throw new Exception();
-                }
 
                 if (!valueCountRatio.Equals(0.0))
                 {

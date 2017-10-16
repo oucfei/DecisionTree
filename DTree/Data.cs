@@ -14,7 +14,9 @@ namespace DTree
 
         public static List<List<object>> AllSampleData { get; } = new List<List<object>>();
 
-        public static void ReadSampleData(string fileName)
+        public static List<List<object>> AllTestData { get; } = new List<List<object>>();
+
+        public static void ReadData(string fileName, bool isSampleData)
         {
             string line;
             var file = new System.IO.StreamReader(fileName);
@@ -38,20 +40,22 @@ namespace DTree
 
                 if (!isData)
                 {
-                    PopulateAttributes(line);
+                    PopulateAttributes(line, isSampleData);
                 }
                 else
                 {
-                    PopulateSampleData(line);
+                    PopulateSampleData(line, isSampleData);
                 }
             }
 
             //removing the last attribute because that's the target attribute.
-            //AllAttributes.RemoveAt(AllAttributes.Count - 1);
-            RemainingAttributes.RemoveAt(RemainingAttributes.Count - 1);
+            if (isSampleData)
+            {
+                RemainingAttributes.RemoveAt(RemainingAttributes.Count - 1);
+            }
         }
 
-        public static void PopulateAttributes(string line)
+        public static void PopulateAttributes(string line, bool isSampleData)
         {
             if (!string.IsNullOrEmpty(line))
             {
@@ -67,19 +71,29 @@ namespace DTree
                     lastCloseParentIndex - 1 - firstOpenParentIndex).Split(',');
                 attribute.PossibleValues.AddRange(valueParts.Select(value => value.RemoveSingleQuoteIfAny()).ToList());
 
-                AllAttributes.Add(attribute);
-                RemainingAttributes.Add(attribute);
+                if (isSampleData)
+                {
+                    AllAttributes.Add(attribute);
+                    RemainingAttributes.Add(attribute);
+                }
             }
         }
 
-        public static void PopulateSampleData(string line)
+        public static void PopulateSampleData(string line, bool isSampleData)
         {
             if (!string.IsNullOrEmpty(line))
             {
                 var parts = line.Split(',');
                 var data = parts.Select(value => value.RemoveSingleQuoteIfAny()).Cast<object>().ToList();
 
-                AllSampleData.Add(data);
+                if (isSampleData)
+                {
+                    AllSampleData.Add(data);
+                }
+                else
+                {
+                    AllTestData.Add(data);
+                }
             }
         }
     }
