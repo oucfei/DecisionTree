@@ -1,10 +1,7 @@
-﻿using MathNet.Numerics.Distributions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+using MathNet.Numerics.Distributions;
 
 namespace DTree
 {
@@ -12,7 +9,7 @@ namespace DTree
     {
         private const string TargetAttributeName = "Class";
 
-        private const double ConfidenceLevel = 0.0;
+        public const double ConfidenceLevel = 0.5;
 
         public TreeNode GrowTree(List<List<object>> sampleData, TreeNode parent, string parentAttributeValue)
         {
@@ -32,30 +29,31 @@ namespace DTree
             }
 
             double gainRatio;
-            var bestAttribute = FindBestAttribute(sampleData, out gainRatio);
+            string mostCommonValue;
+            var bestAttribute = FindBestAttribute(sampleData, out gainRatio, out mostCommonValue);
             if (gainRatio < 1e-10)
             {
                 Console.WriteLine("best attribute less than mini gainRatio: " + bestAttribute.AttributeName);
                 return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue); //leaf node
             }
 
-            var pValue = CalculatePValue(sampleData, bestAttribute);
+            var pValue = CalculatePValue(sampleData, bestAttribute, mostCommonValue);
             if (pValue > (1 - ConfidenceLevel))
             {
                 Console.WriteLine("best attribute less than Confidence level with pValue: " + pValue);
-                //TODO: OK?
                 return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue); //leaf node
             }
 
-            Console.WriteLine("Found best attribute: " + bestAttribute.AttributeName);
+            Console.WriteLine("Found best attribute: " + bestAttribute.AttributeName + " //p value: " + pValue);
 
-            var newNode = new TreeNode(bestAttribute, parent, parentAttributeValue);
-            
+            var newNode =
+                new TreeNode(bestAttribute, parent, parentAttributeValue)
+                {
+                    SplittingAttributeMostCommonValue = mostCommonValue
+                };
+
             Data.RemainingAttributes.Remove(
                     Data.RemainingAttributes.FirstOrDefault(a => a.AttributeName.Equals(bestAttribute.AttributeName)));
-
-            var mostCommonValue = GetMostCommonValueForAttribute(sampleData, bestAttribute.AttributeName);
-            newNode.SplittingAttributeMostCommonValue = mostCommonValue;
 
             foreach (var value in bestAttribute.PossibleValues)
             {
@@ -73,7 +71,7 @@ namespace DTree
             return newNode;
         }
 
-        private double CalculatePValue(List<List<object>> sampleData, Attribute candidateAttribute)
+        private double CalculatePValue(List<List<object>> sampleData, Attribute candidateAttribute, string mostCommonValue)
         {
             int totalTrueCount = GetPositiveSampleCount(sampleData);
             int totalFalseCount = sampleData.Count - totalTrueCount;
@@ -83,11 +81,10 @@ namespace DTree
             {
                 var trueCount = 0;
                 var falseCount = 0;
-                GetSplitCountForValue(sampleData, candidateAttribute, value, out trueCount, out falseCount);
+                GetSplitCountForValue(sampleData, candidateAttribute, value, mostCommonValue, out trueCount, out falseCount);
 
                 if (trueCount == 0 && falseCount == 0)
                 {
-                    //TODO: OK?
                     continue;                 
                 }
 
@@ -96,6 +93,11 @@ namespace DTree
 
                 chiSquare += (trueCount - expectedTrue) * (trueCount - expectedTrue) / expectedTrue +
                              (falseCount - expectedFalse) * (falseCount - expectedFalse) / expectedFalse;
+            }
+
+            if (chiSquare.Equals(0.0))
+            {
+                throw new Exception();
             }
 
             var chiSquareCalculator = new ChiSquared(candidateAttribute.PossibleValues.Count - 1);
@@ -168,20 +170,24 @@ namespace DTree
             return true;
         }
 
-        public Attribute FindBestAttribute(List<List<object>> sampleData, out double bestAttributeGainRatio)
+        public Attribute FindBestAttribute(List<List<object>> sampleData, out double bestAttributeGainRatio, out string attributeMostCommonValue)
         {
             int positiveCount = GetPositiveSampleCount(sampleData);
             double entropyBeforeSplit = CalculateEntropy(positiveCount, sampleData.Count - positiveCount);
 
             double maxGainRatio = 0.0;
             var bestAttribute = new Attribute();
+            attributeMostCommonValue = "";
+
             foreach (var attribute in Data.RemainingAttributes)
             {
-                double gainRatio = CalculateGainRatio(sampleData, attribute, entropyBeforeSplit);
-                if (gainRatio >= maxGainRatio)
+                var mostCommonValue = GetMostCommonValueForAttribute(sampleData, attribute.AttributeName);
+                double gainRatio = CalculateGainRatio(sampleData, attribute, entropyBeforeSplit, mostCommonValue);
+                if (!double.IsInfinity(gainRatio) && !double.IsNaN(gainRatio) && gainRatio >= maxGainRatio)
                 {
                     maxGainRatio = gainRatio;
                     bestAttribute = attribute;
+                    attributeMostCommonValue = mostCommonValue;
                 }
             }
 
@@ -211,7 +217,7 @@ namespace DTree
             return sampleSubset;
         }
 
-        private double CalculateGainRatio(List<List<object>> sampleData, Attribute attribute, double entropyBeforeSplit)
+        private double CalculateGainRatio(List<List<object>> sampleData, Attribute attribute, double entropyBeforeSplit, string attributeMostCommonValue)
         {
             var totalEntropyAfterSplit = 0.0;
             var splitInformation = 0.0;
@@ -220,7 +226,7 @@ namespace DTree
             {
                 var trueCount = 0;
                 var falseCount = 0;
-                GetSplitCountForValue(sampleData, attribute, value, out trueCount, out falseCount);
+                GetSplitCountForValue(sampleData, attribute, value, attributeMostCommonValue, out trueCount, out falseCount);
 
                 if (trueCount == 0 && falseCount == 0)
                 {
@@ -252,7 +258,7 @@ namespace DTree
             return informationGain / splitInformation;
         }
 
-        private void GetSplitCountForValue(List<List<object>> sampleData, Attribute attribute, string attributeValue, out int trueCount, out int falseCount)
+        private void GetSplitCountForValue(List<List<object>> sampleData, Attribute attribute, string attributeValue, string attributeMostCommonValue, out int trueCount, out int falseCount)
         {
             trueCount = 0;
             falseCount = 0;
@@ -260,7 +266,13 @@ namespace DTree
             int attributeIndex = Data.AllAttributes.FindIndex(a => a.AttributeName.Equals(attribute.AttributeName));
             foreach (var data in sampleData)
             {
-                if (((string) data[attributeIndex]).Equals(attributeValue))
+                var value = ((string) data[attributeIndex]);
+                if (value.Equals("?"))
+                {
+                    value = attributeMostCommonValue;
+                }
+
+                if (value.Equals(attributeValue))
                 {
                     if (((string) data[data.Count - 1]).Equals("True"))
                     {

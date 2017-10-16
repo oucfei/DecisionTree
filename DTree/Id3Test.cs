@@ -8,9 +8,9 @@ namespace DTree
 {
     public class Id3Test
     {
-        private const string TrainingDataFile = @"D:\MachineLearning\Data\training_subsetD\training_subsetD.arff";
+        private const string TrainingDataFile = @"E:\MachineLearning\training_subsetD\training_subsetD.arff";
 
-        private const string TestDataFile = @"D:\MachineLearning\Data\testingD\testingD.arff";
+        private const string TestDataFile = @"E:\MachineLearning\testingD\testingD.arff";
 
         //private const string TrainingDataFile = @"D:\MachineLearning\Data\SampleData.txt";
 
@@ -22,11 +22,30 @@ namespace DTree
 
             TreeNode root = tree.GrowTree(Data.AllSampleData, null, "");
 
+            Console.WriteLine("Decision tree output for training data:");
             TestDecisionTree(root, Data.AllSampleData);
 
-            //Data.ReadData(TestDataFile, false);
+            Data.ReadData(TestDataFile, false);
 
-            //TestDecisionTree(root, Data.AllTestData);
+            Console.WriteLine("Decision tree output for test data:");
+            TestDecisionTree(root, Data.AllTestData);
+        }
+
+        private static int NumberOfDecisionNodes(TreeNode root)
+        {
+            if (root.Children == null || root.Children.Count == 0 ||
+                string.IsNullOrEmpty(root.SplittingAttribute.AttributeName))
+            {
+                return 0;
+            }
+
+            int sum = 0;
+            foreach (var child in root.Children)
+            {
+                sum += NumberOfDecisionNodes(child);
+            }
+
+            return sum + 1;
         }
 
         private static void TestDecisionTree(TreeNode root, List<List<object>> AllData)
@@ -62,7 +81,8 @@ namespace DTree
                 }
             }
 
-            Console.WriteLine(realFalseOutputFalse + ", " + realTrueOutputTrue + ", " + realFalseOutputTrue + ", " + realTrueOutputFalse);
+            Console.WriteLine("Confidence level: " + Id3DecisionTree.ConfidenceLevel + ". " + realFalseOutputFalse + ", " + realTrueOutputTrue + ", " + realFalseOutputTrue + ", " + realTrueOutputFalse);
+            Console.WriteLine("Num of decision nodes: " + NumberOfDecisionNodes(root));
         }
 
         private static bool TestDataWithDecisionTree(TreeNode root, List<object> data)
