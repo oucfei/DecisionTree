@@ -1,0 +1,24 @@
+@RELATION weather
+
+@ATTRIBUTE outlook {Sunny,Overcast,Rain}
+@ATTRIBUTE temperature {Hot,Mild,Cool}
+@ATTRIBUTE humidity {High,Falsermal}
+@ATTRIBUTE windy {Strong,Weak}
+@ATTRIBUTE Class {True,False}
+
+@data
+
+Sunny,Hot,High,Weak,False
+Sunny,Hot,High,Strong,False
+Overcast,Hot,High,Weak,True
+Rain,Mild,High,Weak,True
+Rain,Cool,Falsermal,Weak,True
+Rain,Cool,Falsermal,Strong,False
+Overcast,Cool,Falsermal,Strong,True
+Sunny,Mild,High,Weak,False
+Sunny,Cool,Falsermal,Weak,True
+Rain,Mild,Falsermal,Weak,True
+Sunny,Mild,Falsermal,Strong,True
+Overcast,Mild,High,Strong,True
+Overcast,Hot,Falsermal,Weak,True
+Rain,Mild,High,Strong,False
