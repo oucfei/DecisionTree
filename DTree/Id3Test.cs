@@ -12,8 +12,6 @@ namespace DTree
 
         private const string TestDataFile = @"E:\MachineLearning\testingD\testingD.arff";
 
-        //private const string TrainingDataFile = @"D:\MachineLearning\Data\SampleData.txt";
-
         public static void Main(string[] args)
         {
             Data.ReadData(TrainingDataFile, true);
@@ -29,6 +27,9 @@ namespace DTree
 
             Console.WriteLine("Decision tree output for test data:");
             TestDecisionTree(root, Data.AllTestData);
+
+            Console.WriteLine("Press any key to finish");
+            Console.ReadKey();
         }
 
         private static int NumberOfDecisionNodes(TreeNode root)
@@ -81,7 +82,9 @@ namespace DTree
                 }
             }
 
-            Console.WriteLine("Confidence level: " + Id3DecisionTree.ConfidenceLevel + ". " + realFalseOutputFalse + ", " + realTrueOutputTrue + ", " + realFalseOutputTrue + ", " + realTrueOutputFalse);
+            Console.WriteLine($"Confidence level: {Id3DecisionTree.ConfidenceLevel}. True Positive: {realTrueOutputTrue}. True Negative: {realFalseOutputFalse}. False Positive: {realFalseOutputTrue}. False Negative: {realTrueOutputFalse}");
+            Console.WriteLine($"Precision = {(double)realTrueOutputTrue/(realTrueOutputTrue + realFalseOutputTrue)}. Recall = {(double)realTrueOutputTrue/(realTrueOutputTrue + realTrueOutputFalse)}");
+            Console.WriteLine($"Accuracy: {(double)(realTrueOutputTrue + realFalseOutputFalse)/ AllData.Count}");
             Console.WriteLine("Num of decision nodes: " + NumberOfDecisionNodes(root));
         }
 

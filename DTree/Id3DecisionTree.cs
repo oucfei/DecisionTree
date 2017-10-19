@@ -9,7 +9,7 @@ namespace DTree
     {
         private const string TargetAttributeName = "Class";
 
-        public const double ConfidenceLevel = 0.5;
+        public const double ConfidenceLevel = 0.0;
 
         public TreeNode GrowTree(List<List<object>> sampleData, TreeNode parent, string parentAttributeValue)
         {
@@ -44,7 +44,7 @@ namespace DTree
                 return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue); //leaf node
             }
 
-            Console.WriteLine("Found best attribute: " + bestAttribute.AttributeName + " //p value: " + pValue);
+            Console.WriteLine("Found best attribute: " + bestAttribute.AttributeName + " //gainRatio: " + gainRatio);
 
             var newNode =
                 new TreeNode(bestAttribute, parent, parentAttributeValue)
@@ -52,20 +52,28 @@ namespace DTree
                     SplittingAttributeMostCommonValue = mostCommonValue
                 };
 
-            Data.RemainingAttributes.Remove(
-                    Data.RemainingAttributes.FirstOrDefault(a => a.AttributeName.Equals(bestAttribute.AttributeName)));
+            var bestAttributeCopy = new Attribute()
+            {
+                AttributeName = bestAttribute.AttributeName
+            };
+
+            bestAttributeCopy.PossibleValues.AddRange(bestAttribute.PossibleValues);          
 
             foreach (var value in bestAttribute.PossibleValues)
-            {
+            {             
                 var sampleSubset = GetSamplesHaveTheValue(sampleData, value, bestAttribute, mostCommonValue);
-                if (sampleSubset.Count == 0)
+                if (sampleSubset.Count > 0)
                 {
-                    newNode.Children.Add(new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), newNode, value)); //leaf node
+                    Data.RemainingAttributes.Remove(
+                        Data.RemainingAttributes.FirstOrDefault(a => a.AttributeName.Equals(bestAttribute.AttributeName)));
+
+                    newNode.Children.Add(GrowTree(sampleSubset, newNode, value));
+                    Data.RemainingAttributes.Add(bestAttributeCopy);                             
                 }
                 else
                 {
-                    newNode.Children.Add(GrowTree(sampleSubset, newNode, value));
-                }                              
+                    newNode.Children.Add(new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), newNode, value)); //leaf node
+                }
             }
 
             return newNode;
@@ -93,11 +101,6 @@ namespace DTree
 
                 chiSquare += (trueCount - expectedTrue) * (trueCount - expectedTrue) / expectedTrue +
                              (falseCount - expectedFalse) * (falseCount - expectedFalse) / expectedFalse;
-            }
-
-            if (chiSquare.Equals(0.0))
-            {
-                throw new Exception();
             }
 
             var chiSquareCalculator = new ChiSquared(candidateAttribute.PossibleValues.Count - 1);
@@ -230,7 +233,6 @@ namespace DTree
 
                 if (trueCount == 0 && falseCount == 0)
                 {
-                    //TODO:OK?
                     continue; 
                 }
 
@@ -241,21 +243,16 @@ namespace DTree
 
                 if (!valueCountRatio.Equals(0.0))
                 {
-                    valueCountRatio = valueCountRatio * Math.Log(valueCountRatio);
+                    valueCountRatio = valueCountRatio * Math.Log(valueCountRatio, 2);
                 }
 
                 splitInformation -= valueCountRatio;
             }
 
             var informationGain = entropyBeforeSplit - totalEntropyAfterSplit;
+            var gainRatio = informationGain / splitInformation;
 
-            if (double.IsNaN(splitInformation))
-            {
-                throw new Exception();
-            }
-
-            //TODO: splitInformation == 0?
-            return informationGain / splitInformation;
+            return gainRatio;
         }
 
         private void GetSplitCountForValue(List<List<object>> sampleData, Attribute attribute, string attributeValue, string attributeMostCommonValue, out int trueCount, out int falseCount)
@@ -295,12 +292,12 @@ namespace DTree
 
             if (!trueRatio.Equals(0.0))
             {
-                trueRatio = -trueRatio * Math.Log(trueRatio);
+                trueRatio = -trueRatio * Math.Log(trueRatio, 2);
             }
 
             if (!falseRatio.Equals(0.0))
             {
-                falseRatio = -falseRatio * Math.Log(falseRatio);
+                falseRatio = -falseRatio * Math.Log(falseRatio, 2);
             }
 
             return trueRatio + falseRatio;
