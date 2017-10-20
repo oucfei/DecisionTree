@@ -12,6 +12,8 @@ namespace DTree
 
         private const string TestDataFile = @"E:\MachineLearning\testingD\testingD.arff";
 
+        public const double ConfidenceLevel = 0.0;
+
         public static void Main(string[] args)
         {
             Data.ReadData(TrainingDataFile, true);
@@ -82,7 +84,7 @@ namespace DTree
                 }
             }
 
-            Console.WriteLine($"Confidence level: {Id3DecisionTree.ConfidenceLevel}. True Positive: {realTrueOutputTrue}. True Negative: {realFalseOutputFalse}. False Positive: {realFalseOutputTrue}. False Negative: {realTrueOutputFalse}");
+            Console.WriteLine($"Confidence level: {ConfidenceLevel}. True Positive: {realTrueOutputTrue}. True Negative: {realFalseOutputFalse}. False Positive: {realFalseOutputTrue}. False Negative: {realTrueOutputFalse}");
             Console.WriteLine($"Precision = {(double)realTrueOutputTrue/(realTrueOutputTrue + realFalseOutputTrue)}. Recall = {(double)realTrueOutputTrue/(realTrueOutputTrue + realTrueOutputFalse)}");
             Console.WriteLine($"Accuracy: {(double)(realTrueOutputTrue + realFalseOutputFalse)/ AllData.Count}");
             Console.WriteLine("Num of decision nodes: " + NumberOfDecisionNodes(root));

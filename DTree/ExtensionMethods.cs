@@ -8,6 +8,10 @@ namespace DTree
 {
     public static class ExtensionMethods
     {
+        /// <summary>
+        /// Removes the single quote if any.
+        /// </summary>
+        /// <param name="str">The string.</param>
         public static string RemoveSingleQuoteIfAny(this String str)
         {
             if (string.IsNullOrEmpty(str) || str.Length < 2) {

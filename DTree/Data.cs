@@ -8,14 +8,23 @@ namespace DTree
 {
     public static class Data
     {
+        //All 275 attributes in the training/test dataset.
         public static List<Attribute> AllAttributes { get; } = new List<Attribute>();
 
+        //The remaining attributes in the process of growing trees. The next best attribute will be searched from this list.
         public static List<Attribute> RemainingAttributes { get; } = new List<Attribute>();
 
+        //All data from training dataset.
         public static List<List<object>> AllSampleData { get; } = new List<List<object>>();
 
+        //All data from test dataset.
         public static List<List<object>> AllTestData { get; } = new List<List<object>>();
 
+        /// <summary>
+        /// Reads the data. Assuming the data is in ARFF format.
+        /// </summary>
+        /// <param name="fileName">Name of the file.</param>
+        /// <param name="isSampleData">if set to <c>true</c> [is sample data].</param>
         public static void ReadData(string fileName, bool isSampleData)
         {
             string line;
@@ -48,19 +57,25 @@ namespace DTree
                 }
             }
 
-            //removing the last attribute because that's the target attribute.
+            //removing the last attribute because that's the target attribute ("Class").
             if (isSampleData)
             {
                 RemainingAttributes.RemoveAt(RemainingAttributes.Count - 1);
             }
         }
 
+        /// <summary>
+        /// Populates the attributes.
+        /// </summary>
+        /// <param name="line">The line.</param>
+        /// <param name="isSampleData">if set to <c>true</c> [is sample data].</param>
         public static void PopulateAttributes(string line, bool isSampleData)
         {
             if (!string.IsNullOrEmpty(line))
             {
                 var attribute = new Attribute();
 
+                //Parsing the attributes by removing the {} and then split by comma.
                 var firstSpaceIndex = line.IndexOf(" ", StringComparison.Ordinal);
                 var firstOpenParentIndex = line.IndexOf("{", StringComparison.Ordinal);
                 var lastCloseParentIndex = line.LastIndexOf("}", StringComparison.Ordinal);
@@ -79,6 +94,11 @@ namespace DTree
             }
         }
 
+        /// <summary>
+        /// Populates the sample data.
+        /// </summary>
+        /// <param name="line">The line.</param>
+        /// <param name="isSampleData">if set to <c>true</c> [is sample data].</param>
         public static void PopulateSampleData(string line, bool isSampleData)
         {
             if (!string.IsNullOrEmpty(line))

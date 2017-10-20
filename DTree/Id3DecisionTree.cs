@@ -9,43 +9,53 @@ namespace DTree
     {
         private const string TargetAttributeName = "Class";
 
-        public const double ConfidenceLevel = 0.0;
-
+        /// <summary>
+        /// The recursive method to build the decision tree.
+        /// </summary>
+        /// <param name="sampleData">The sample data.</param>
+        /// <param name="parent">The parent.</param>
+        /// <param name="parentAttributeValue">The parent attribute value.</param>
         public TreeNode GrowTree(List<List<object>> sampleData, TreeNode parent, string parentAttributeValue)
         {
+            //If all samples are classfied as True, stop growing the tree and return a leaf node with Label "True".
             if (IsAllSamplesTrue(sampleData))
             {
-                return new TreeNode(new Attribute("True"), parent, parentAttributeValue); //leaf node
+                return new TreeNode(new Attribute("True"), parent, parentAttributeValue); 
             }
 
+            //If all samples are classfied as False, stop growing the tree and return a leaf node with Label "False".
             if (IsAllSamplesFalse(sampleData))
             {
-                return new TreeNode(new Attribute("False"), parent, parentAttributeValue); //leaf node
+                return new TreeNode(new Attribute("False"), parent, parentAttributeValue);
             }
 
+            //If no attribute left, stop growing the tree and return a leaf node with label value = the most common value for the target attribute in those sample data.
             if (Data.RemainingAttributes.Count == 0)
             {
-                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue); //leaf node
+                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue);
             }
 
+            //Seach for the next best attribute with the most gain ratio.
             double gainRatio;
             string mostCommonValue;
             var bestAttribute = FindBestAttribute(sampleData, out gainRatio, out mostCommonValue);
             if (gainRatio < 1e-10)
             {
                 Console.WriteLine("best attribute less than mini gainRatio: " + bestAttribute.AttributeName);
-                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue); //leaf node
+                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue);
             }
 
+            //The best attribute should pass the chi square test. Otherwise it's not statistical significant so we stop splitting and return a leaf node.
             var pValue = CalculatePValue(sampleData, bestAttribute, mostCommonValue);
-            if (pValue > (1 - ConfidenceLevel))
+            if (pValue > (1 - Id3Test.ConfidenceLevel))
             {
                 Console.WriteLine("best attribute less than Confidence level with pValue: " + pValue);
-                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue); //leaf node
+                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue);
             }
 
-            Console.WriteLine("Found best attribute: " + bestAttribute.AttributeName + " //gainRatio: " + gainRatio);
+            Console.WriteLine("Found best attribute: " + bestAttribute.AttributeName + " //gainRatio: " + gainRatio + " //P value:" + pValue);
 
+            //Create a new decision node, the splitting attribute will be the best attribute found above.
             var newNode =
                 new TreeNode(bestAttribute, parent, parentAttributeValue)
                 {
@@ -60,10 +70,12 @@ namespace DTree
             bestAttributeCopy.PossibleValues.AddRange(bestAttribute.PossibleValues);          
 
             foreach (var value in bestAttribute.PossibleValues)
-            {             
+            {   
+                //Get a subset of the training data that splitted by the current value of the best attribute.          
                 var sampleSubset = GetSamplesHaveTheValue(sampleData, value, bestAttribute, mostCommonValue);
                 if (sampleSubset.Count > 0)
                 {
+                    //Recursively grow the tree with the remaining attribute (remove the current best attribute) and the subset of the dataset.
                     Data.RemainingAttributes.Remove(
                         Data.RemainingAttributes.FirstOrDefault(a => a.AttributeName.Equals(bestAttribute.AttributeName)));
 
@@ -72,6 +84,7 @@ namespace DTree
                 }
                 else
                 {
+                    //sampleSubset == 0, meaning no data left on this branch. Stop growing and return new leaf node.
                     newNode.Children.Add(new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), newNode, value)); //leaf node
                 }
             }
@@ -79,6 +92,12 @@ namespace DTree
             return newNode;
         }
 
+        /// <summary>
+        /// Calculates the p value from the chi square distribution.
+        /// </summary>
+        /// <param name="sampleData">The sample data.</param>
+        /// <param name="candidateAttribute">The candidate attribute.</param>
+        /// <param name="mostCommonValue">The most common value.</param>
         private double CalculatePValue(List<List<object>> sampleData, Attribute candidateAttribute, string mostCommonValue)
         {
             int totalTrueCount = GetPositiveSampleCount(sampleData);
@@ -109,6 +128,11 @@ namespace DTree
             return pValue;
         }
 
+        /// <summary>
+        /// Gets the most common value for the attribute within a given sample dataset.
+        /// </summary>
+        /// <param name="sampleData">The sample data.</param>
+        /// <param name="attributeName">Name of the attribute.</param>
         private string GetMostCommonValueForAttribute(List<List<object>> sampleData, string attributeName)
         {
             int attributeIndex = Data.AllAttributes.FindIndex(a => a.AttributeName.Equals(attributeName));
@@ -147,6 +171,13 @@ namespace DTree
             return mostCommonValue;
         }
 
+        /// <summary>
+        /// Determines whether [is all samples true] [the specified sample data].
+        /// </summary>
+        /// <param name="sampleData">The sample data.</param>
+        /// <returns>
+        ///   <c>true</c> if [is all samples true] [the specified sample data]; otherwise, <c>false</c>.
+        /// </returns>
         public bool IsAllSamplesTrue(List<List<object>> sampleData)
         {
             foreach (var data in sampleData)
@@ -160,6 +191,13 @@ namespace DTree
             return true;
         }
 
+        /// <summary>
+        /// Determines whether [is all samples false] [the specified sample data].
+        /// </summary>
+        /// <param name="sampleData">The sample data.</param>
+        /// <returns>
+        ///   <c>true</c> if [is all samples false] [the specified sample data]; otherwise, <c>false</c>.
+        /// </returns>
         public bool IsAllSamplesFalse(List<List<object>> sampleData)
         {
             foreach (var data in sampleData)
@@ -173,6 +211,12 @@ namespace DTree
             return true;
         }
 
+        /// <summary>
+        /// Finds the best attribute by calculating and comparing each attribute's gain ratio.
+        /// </summary>
+        /// <param name="sampleData">The sample data.</param>
+        /// <param name="bestAttributeGainRatio">The best attribute gain ratio.</param>
+        /// <param name="attributeMostCommonValue">The attribute most common value.</param>
         public Attribute FindBestAttribute(List<List<object>> sampleData, out double bestAttributeGainRatio, out string attributeMostCommonValue)
         {
             int positiveCount = GetPositiveSampleCount(sampleData);
@@ -198,6 +242,13 @@ namespace DTree
             return bestAttribute;
         }
 
+        /// <summary>
+        /// Gets a subset of samples that have the input value for the attribute.
+        /// </summary>
+        /// <param name="sampleData">The sample data.</param>
+        /// <param name="value">The value.</param>
+        /// <param name="attribute">The attribute.</param>
+        /// <param name="mostCommonValue">The most common value.</param>
         public List<List<object>> GetSamplesHaveTheValue(List<List<object>> sampleData, string value, Attribute attribute, string mostCommonValue)
         {
             int attributeIndex = Data.AllAttributes.FindIndex(a => a.AttributeName.Equals(attribute.AttributeName));
@@ -220,6 +271,13 @@ namespace DTree
             return sampleSubset;
         }
 
+        /// <summary>
+        /// Calculates the gain ratio.
+        /// </summary>
+        /// <param name="sampleData">The sample data.</param>
+        /// <param name="attribute">The attribute.</param>
+        /// <param name="entropyBeforeSplit">The entropy before split.</param>
+        /// <param name="attributeMostCommonValue">The attribute most common value.</param>
         private double CalculateGainRatio(List<List<object>> sampleData, Attribute attribute, double entropyBeforeSplit, string attributeMostCommonValue)
         {
             var totalEntropyAfterSplit = 0.0;
@@ -255,6 +313,15 @@ namespace DTree
             return gainRatio;
         }
 
+        /// <summary>
+        /// Gets the number of positive samples and negative samples.
+        /// </summary>
+        /// <param name="sampleData">The sample data.</param>
+        /// <param name="attribute">The attribute.</param>
+        /// <param name="attributeValue">The attribute value.</param>
+        /// <param name="attributeMostCommonValue">The attribute most common value.</param>
+        /// <param name="trueCount">The true count.</param>
+        /// <param name="falseCount">The false count.</param>
         private void GetSplitCountForValue(List<List<object>> sampleData, Attribute attribute, string attributeValue, string attributeMostCommonValue, out int trueCount, out int falseCount)
         {
             trueCount = 0;
@@ -283,6 +350,11 @@ namespace DTree
             }
         }
 
+        /// <summary>
+        /// Calculates the entropy.
+        /// </summary>
+        /// <param name="trueCount">The true count.</param>
+        /// <param name="falseCount">The false count.</param>
         private double CalculateEntropy(int trueCount, int falseCount)
         {
             var total = trueCount + falseCount;
@@ -303,6 +375,10 @@ namespace DTree
             return trueRatio + falseRatio;
         }
 
+        /// <summary>
+        /// Gets the positive sample count.
+        /// </summary>
+        /// <param name="sampleData">The sample data.</param>
         private int GetPositiveSampleCount(List<List<object>> sampleData)
         {
             int count = 0;
