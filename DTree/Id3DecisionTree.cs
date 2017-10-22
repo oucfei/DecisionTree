@@ -20,19 +20,21 @@ namespace DTree
             //If all samples are classfied as True, stop growing the tree and return a leaf node with Label "True".
             if (IsAllSamplesTrue(sampleData))
             {
-                return new TreeNode(new Attribute("True"), parent, parentAttributeValue); 
+                return new TreeNode(new Attribute("True"), parent, parentAttributeValue, sampleData.Count); 
             }
 
             //If all samples are classfied as False, stop growing the tree and return a leaf node with Label "False".
             if (IsAllSamplesFalse(sampleData))
             {
-                return new TreeNode(new Attribute("False"), parent, parentAttributeValue);
+                return new TreeNode(new Attribute("False"), parent, parentAttributeValue, sampleData.Count);
             }
 
             //If no attribute left, stop growing the tree and return a leaf node with label value = the most common value for the target attribute in those sample data.
             if (Data.RemainingAttributes.Count == 0)
             {
-                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue);
+                var v = GetMostCommonValueForAttribute(sampleData, TargetAttributeName);
+                var tCount = sampleData.Count(data => data[data.Count - 1].Equals("True"));
+                return new TreeNode(new Attribute(v), parent, parentAttributeValue, v.Equals("True")? tCount : sampleData.Count - tCount);
             }
 
             //Seach for the next best attribute with the most gain ratio.
@@ -41,23 +43,27 @@ namespace DTree
             var bestAttribute = FindBestAttribute(sampleData, out gainRatio, out mostCommonValue);
             if (gainRatio < 1e-10)
             {
+                var v = GetMostCommonValueForAttribute(sampleData, TargetAttributeName);
+                var tCount = sampleData.Count(data => data[data.Count - 1].Equals("True"));
                 Console.WriteLine("best attribute less than mini gainRatio: " + bestAttribute.AttributeName);
-                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue);
+                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue, v.Equals("True") ? tCount : sampleData.Count - tCount);
             }
 
             //The best attribute should pass the chi square test. Otherwise it's not statistical significant so we stop splitting and return a leaf node.
             var pValue = CalculatePValue(sampleData, bestAttribute, mostCommonValue);
             if (pValue > (1 - Id3Test.ConfidenceLevel))
             {
+                var v = GetMostCommonValueForAttribute(sampleData, TargetAttributeName);
+                var tCount = sampleData.Count(data => data[data.Count - 1].Equals("True"));
                 Console.WriteLine("best attribute less than Confidence level with pValue: " + pValue);
-                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue);
+                return new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), parent, parentAttributeValue, v.Equals("True") ? tCount : sampleData.Count - tCount);
             }
 
             Console.WriteLine("Found best attribute: " + bestAttribute.AttributeName + " //gainRatio: " + gainRatio + " //P value:" + pValue);
 
             //Create a new decision node, the splitting attribute will be the best attribute found above.
             var newNode =
-                new TreeNode(bestAttribute, parent, parentAttributeValue)
+                new TreeNode(bestAttribute, parent, parentAttributeValue, -1)
                 {
                     SplittingAttributeMostCommonValue = mostCommonValue
                 };
@@ -84,8 +90,10 @@ namespace DTree
                 }
                 else
                 {
+                    var v = GetMostCommonValueForAttribute(sampleData, TargetAttributeName);
+                    var tCount = sampleData.Count(data => data[data.Count - 1].Equals("True"));
                     //sampleSubset == 0, meaning no data left on this branch. Stop growing and return new leaf node.
-                    newNode.Children.Add(new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), newNode, value)); //leaf node
+                    newNode.Children.Add(new TreeNode(new Attribute(GetMostCommonValueForAttribute(sampleData, TargetAttributeName)), newNode, value, v.Equals("True") ? tCount : sampleData.Count - tCount)); //leaf node
                 }
             }
 

@@ -34,12 +34,18 @@ namespace DTree
         /// </summary>
         public string SplittingAttributeMostCommonValue { get; set; }
 
-        public TreeNode(Attribute splittingAttribute, TreeNode parent, string parentValue)
+        /// <summary>
+        /// Gets or sets the number of examples. This is used to anwser question 1.6
+        /// </summary>
+        public int NumberOfExamples { get; set; }
+
+        public TreeNode(Attribute splittingAttribute, TreeNode parent, string parentValue, int numberOfExamples)
         {
             this.SplittingAttribute = splittingAttribute;
             this.Children = new List<TreeNode>();
             this.Parent = parent;
             this.ParentAttributeValue = parentValue;
+            this.NumberOfExamples = numberOfExamples;
         }
 
         public TreeNode()
